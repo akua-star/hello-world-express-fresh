@@ -6,8 +6,8 @@ dotenv.config();
 
 const app = express();
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  connectionString: process.env.DATABASE_URL || 'postgres://postgres:5432@localhost:5432/myexpressdb',
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
 app.get('/', (req, res) => {
