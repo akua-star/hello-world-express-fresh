@@ -5,23 +5,11 @@ const port = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Database configuration for Render
+// Database configuration with conditional connection
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  connectionString: process.env.DATABASE_URL || `postgres://postgres:5432@localhost:5432/myexpressdb`,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
-
-// Local fallback (optional, remove if not needed)
-if (!process.env.DATABASE_URL) {
-  pool = new Pool({
-    user: 'postgres',
-    host: 'localhost',
-    database: 'myexpressdb',
-    password: '5432',
-    port: 5432,
-    ssl: false
-  });
-}
 
 // Signup API
 app.post('/signup', async (req, res) => {
