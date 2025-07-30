@@ -5,13 +5,11 @@ const port = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Database configuration with conditional connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || `postgres://postgres:5432@localhost:5432/myexpressdb`,
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// Signup API
 app.post('/signup', async (req, res) => {
   const { username, email, password } = req.body;
   try {
@@ -26,7 +24,6 @@ app.post('/signup', async (req, res) => {
   }
 });
 
-// Login API
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -45,7 +42,6 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Start the server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
