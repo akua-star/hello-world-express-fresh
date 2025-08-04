@@ -15,7 +15,7 @@ const sequelize = new Sequelize(process.env.DATABASE_URL || `postgres://postgres
 
 const User = require('./models/user')(sequelize, DataTypes);
 
-sequelize.sync().then(() => console.log('Database synced')).catch(err => console.error('Sync error:', err.stack));
+//sequelize.sync().then(() => console.log('Database synced')).catch(err => console.error('Sync error:', err.stack));
 
 async function generateJWT(userId) {
   return new Promise((resolve, reject) => {
