@@ -7,26 +7,27 @@ module.exports = {
         primaryKey: true
       },
       username: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(255),
         allowNull: false,
         unique: true
       },
       email: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(255),
         allowNull: false,
         unique: true
       },
       password: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(255),
         allowNull: false
       },
-      createdAt: {
-        type: Sequelize.DATE,
+      encryption_key: {
+        type: Sequelize.STRING(255),
         allowNull: false
       },
-      updatedAt: {
+      created_at: {
         type: Sequelize.DATE,
-        allowNull: false
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
   },

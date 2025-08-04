@@ -3,22 +3,27 @@
     "username": "postgres",
     "password": "5432",
     "database": "myexpressdb",
-    "host": "localhost",
+    "host": "127.0.0.1",
     "port": 5432,
-    "dialect": "postgres"
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": false
+    }
   },
   "test": {
     "username": "postgres",
     "password": "5432",
     "database": "myexpressdb_test",
-    "host": "localhost",
+    "host": "127.0.0.1",
     "port": 5432,
-    "dialect": "postgres"
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": false
+    }
   },
   "production": {
     "use_env_variable": "DATABASE_URL",
     "dialect": "postgres",
-    "ssl": true,
     "dialectOptions": {
       "ssl": {
         "require": true,
