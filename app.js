@@ -26,11 +26,14 @@ async function generateJWT(userId) {
   });
 }
 
-// Signup API
 app.post('/signup', async (req, res) => {
   const { username, email, password } = req.body;
   try {
+    console.log('Received signup data:', req.body); // Log full request body
     console.log('Signup attempt:', { username, email });
+    if (!email || !username || !password) {
+      return res.status(400).json({ error: 'Missing required fields (username, email, password)' });
+    }
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       console.log('Existing user found:', existingUser.toJSON());
@@ -41,7 +44,7 @@ app.post('/signup', async (req, res) => {
     const encryption_key = Math.random().toString(36).substring(2, 15); // Temporary key
     const user = await User.create({ username, email, password: hashedPassword, encryption_key });
     console.log('User created:', user.toJSON());
-    res.json({ message: 'User created', user });
+    res.status(201).json({ message: 'User created', user });
   } catch (err) {
     console.error('Signup error details:', {
       message: err.message,
