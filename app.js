@@ -46,7 +46,7 @@ const User = sequelize.define('user', {
 // Sync Model with Database (create table if it doesn't exist)
 (async () => {
   try {
-    await sequelize.sync({ alter: true }); // Use { force: true } only for testing to drop and recreate
+    await sequelize.sync({ force: true }); // Use { force: true } only for testing to drop and recreate
     console.log('Database synced');
   } catch (err) {
     console.error('Database sync error:', err);
