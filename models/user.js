@@ -29,8 +29,9 @@ module.exports = (sequelize) => {
       allowNull: false,
     },
   }, {
-    timestamps: false, // Disable automatic createdAt/updatedAt
-    tableName: 'users', // Explicitly set table name
+    timestamps: false, // Explicitly disable timestamps
+    tableName: 'users', // Ensure correct table name
+    freezeTableName: true, // Prevent Sequelize from pluralizing table name
   });
 
   return User;
