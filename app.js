@@ -1,90 +1,102 @@
-require('dotenv').config();
 const express = require('express');
 const { Sequelize, DataTypes } = require('sequelize');
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const app = express();
-const port = process.env.PORT || 3000;
+const crypto = require('crypto');
 
+const app = express();
 app.use(express.json());
 
-const sequelize = new Sequelize(process.env.DATABASE_URL || `postgres://postgres:5432@localhost:5432/myexpressdb`, {
+// Database Configuration (use environment variables from Render)
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
   dialect: 'postgres',
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+  protocol: 'postgres',
+  logging: false, // Set to console.log for debugging if needed
 });
 
-const User = require('./models/user')(sequelize, DataTypes);
+// Define User Model
+const User = sequelize.define('user', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true,
+  },
+  username: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+  },
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  encryption_key: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  created_at: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
+  },
+});
 
-//sequelize.sync().then(() => console.log('Database synced')).catch(err => console.error('Sync error:', err.stack));
+// Sync Model with Database (create table if it doesn't exist)
+(async () => {
+  try {
+    await sequelize.sync({ alter: true }); // Use { force: true } only for testing to drop and recreate
+    console.log('Database synced');
+  } catch (err) {
+    console.error('Database sync error:', err);
+  }
+})();
 
-async function generateJWT(userId) {
-  return new Promise((resolve, reject) => {
-    jwt.sign({ id: userId }, process.env.JWT_SECRET || 'tempsecret', { algorithm: 'HS256' }, (err, token) => {
-      if (err) reject(err);
-      else resolve(token);
-    });
-  });
-}
-
+// Signup Endpoint
 app.post('/signup', async (req, res) => {
   const { username, email, password } = req.body;
   try {
-    console.log('Received signup data:', req.body); // Log full request body
-    console.log('Signup attempt:', { username, email });
-    if (!email || !username || !password) {
+    if (!username || !email || !password) {
       return res.status(400).json({ error: 'Missing required fields (username, email, password)' });
     }
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      console.log('Existing user found:', existingUser.toJSON());
       return res.status(400).json({ error: 'Email already exists' });
     }
-    console.log('No existing user, proceeding to create');
     const hashedPassword = await bcrypt.hash(password, 10);
-    const encryption_key = Math.random().toString(36).substring(2, 15); // Temporary key
-    const user = await User.create({ username, email, password: hashedPassword, encryption_key });
-    console.log('User created:', user.toJSON());
-    res.status(201).json({ message: 'User created', user });
+    const encryptionKey = crypto.randomBytes(16).toString('hex');
+    const user = await User.create({ username, email, password: hashedPassword, encryption_key: encryptionKey });
+    res.status(201).json({ message: 'User created', user: { id: user.id, username: user.username, email: user.email } });
   } catch (err) {
-    console.error('Signup error details:', {
-      message: err.message,
-      stack: err.stack,
-      code: err.code
-    });
+    console.error('Signup error details:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Login API
+// Login Endpoint
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   try {
-    console.log('Login attempt:', { username });
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Missing required fields (username, password)' });
+    }
     const user = await User.findOne({ where: { username } });
-    if (!user) {
-      console.log('User not found:', username);
-      return res.status(401).json({ error: 'Invalid username or password' });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
-    console.log('User found:', user.toJSON());
-    if (await bcrypt.compare(password, user.password)) {
-      const token = await generateJWT(user.id);
-      res.json({ message: 'Login successful', token });
-    } else {
-      console.log('Password mismatch for:', username);
-      res.status(401).json({ error: 'Invalid username or password' });
-    }
+    const token = crypto.randomBytes(16).toString('hex'); // Simple token for demo
+    res.status(200).json({ message: 'Login successful', token });
   } catch (err) {
-    console.error('Login error details:', {
-      message: err.message,
-      stack: err.stack,
-      code: err.code
-    });
+    console.error('Login error details:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+// Start Server
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 module.exports = app;
