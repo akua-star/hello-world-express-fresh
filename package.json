@@ -2,13 +2,13 @@
   "name": "hello-world-express-fresh",
   "version": "1.0.0",
   "main": "app.js",
- "scripts": {
-  "start": "node app.js",
-  "predeploy": "npx sequelize-cli db:migrate"
-},
-
+  "scripts": {
+    "start": "node app.js",
+    "predeploy": "npx sequelize-cli db:migrate"
+  },
   "dependencies": {
-    "bcrypt": "^6.0.0",
+    "bcrypt": "^5.1.1",           
+    "crypto": "^1.0.1",           
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
