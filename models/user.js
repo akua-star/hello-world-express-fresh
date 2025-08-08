@@ -26,8 +26,11 @@ module.exports = (sequelize) => {
     },
     created_at: {
       type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW,
+      allowNull: false,
     },
+  }, {
+    timestamps: false, // Disable automatic createdAt/updatedAt
+    tableName: 'users', // Explicitly set table name
   });
 
   return User;
