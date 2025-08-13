@@ -7,8 +7,7 @@ import crypto from "crypto";
 const app = express();
 const port = process.env.PORT || 10000;
 
-app.use(bodyParser.default.json());
-app.use(bodyParser.default.json()); // Note: Duplicate, remove one instance
+app.use(bodyParser.default.json()); // Remove duplicate
 
 app.use(
   expressjwt({
@@ -21,7 +20,7 @@ app.get('/', (req, res, next) => {
   res.json({ message: "Hello, World!" });
 });
 
-// Signup Route (assumed from previous context)
+// Signup Route
 app.post('/signup', async (req, res, next) => {
   const { username, email, password } = req.body;
   const encryption_key = crypto.randomBytes(16).toString('hex');
@@ -109,6 +108,8 @@ function decrypt(encStr, key) {
   decrypted += decipher.final('utf-8');
   return decrypted;
 }
+
+import models from './models'; // Ensure this is at the bottom due to circular dependency
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
