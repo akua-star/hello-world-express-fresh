@@ -2,6 +2,7 @@ const express = require('express');
 const { Sequelize, DataTypes } = require('sequelize');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const app = express();
 app.use(express.json());
 
@@ -49,6 +50,10 @@ function encrypt(text, key) {
   return iv.toString('hex') + ':' + encrypted.toString('hex');
 }
 
+app.get('/', (req, res) => { // Ensure this route is active
+  res.json({ message: "Hello, World!" });
+});
+
 app.post('/signup', async (req, res) => {
   const { username, email, password } = req.body;
   const encryptionKey = crypto.randomBytes(16).toString('hex');
@@ -65,7 +70,7 @@ app.post('/login', async (req, res) => {
   if (user && await bcrypt.compare(password, user.password)) {
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '1h' });
     res.json({ message: 'Login successful', token });
-  } else {
+    } else {
     res.status(401).json({ message: 'Invalid credentials' });
   }
 });
