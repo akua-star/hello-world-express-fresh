@@ -3,11 +3,12 @@ import bcrypt from 'bcryptjs';
 import * as JWT from 'jsonwebtoken';
 import { expressjwt } from "express-jwt";
 import crypto from "crypto";
+import express from 'express'; // Add this import
 
 const app = express();
 const port = process.env.PORT || 10000;
 
-app.use(bodyParser.default.json()); // Remove duplicate
+app.use(bodyParser.default.json());
 
 app.use(
   expressjwt({
@@ -108,9 +109,8 @@ function decrypt(encStr, key) {
   decrypted += decipher.final('utf-8');
   return decrypted;
 }
-// ... (previous code remains the same)
 
-import models from './models/index.js'; // Updated import
+import models from './models/index.js';
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
