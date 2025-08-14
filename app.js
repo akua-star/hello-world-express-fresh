@@ -108,8 +108,9 @@ function decrypt(encStr, key) {
   decrypted += decipher.final('utf-8');
   return decrypted;
 }
+// ... (previous code remains the same)
 
-import models from './models'; // Ensure this is at the bottom due to circular dependency
+import models from './models/index.js'; // Updated import
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
