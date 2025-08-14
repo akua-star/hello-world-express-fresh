@@ -61,7 +61,7 @@ app.post('/signup', async (req, res) => {
   const hashedKey = await bcrypt.hash(encryptionKey, 10);
   const user = await User.create({ username, email, password: hashedPassword, encryption_key: hashedKey, created_at: new Date() });
   const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '1h' });
-  res.json({ message: 'User created', user: { id: user.id, username, email }, token });
+  res.json({ message: 'User created', user: { id: user.id, username, email }, token, encryption_key: encryptionKey }); // Add encryption_key
 });
 
 app.post('/login', async (req, res) => {
