@@ -1,117 +1,109 @@
-import * as bodyParser from "body-parser";
-import bcrypt from 'bcryptjs';
-import * as JWT from 'jsonwebtoken';
-import { expressjwt } from "express-jwt";
-import crypto from "crypto";
-import express from 'express'; // Add this import
-
+const express = require('express');
+const { Sequelize, DataTypes } = require('sequelize');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const app = express();
-const port = process.env.PORT || 10000;
+app.use(express.json());
 
-app.use(bodyParser.default.json());
-
-app.use(
-  expressjwt({
-    secret: process.env.JWT_SECRET,
-    algorithms: ["HS256"],
-  }).unless({ path: ["/login", "/signup", '/'] })
-);
-
-app.get('/', (req, res, next) => {
-  res.json({ message: "Hello, World!" });
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialect: 'postgres',
+  protocol: 'postgres',
+  logging: false,
 });
 
-// Signup Route
-app.post('/signup', async (req, res, next) => {
+const User = sequelize.define('User', {
+  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  username: { type: DataTypes.STRING, allowNull: false },
+  email: { type: DataTypes.STRING, allowNull: false, unique: true },
+  password: { type: DataTypes.STRING, allowNull: false },
+  encryption_key: { type: DataTypes.STRING, allowNull: false },
+  created_at: { type: DataTypes.DATE, allowNull: false },
+}, { timestamps: false, tableName: 'users' });
+
+const Password = sequelize.define('Password', {
+  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  label: { type: DataTypes.STRING, allowNull: false },
+  username: { type: DataTypes.STRING, allowNull: false },
+  encrypted_password: { type: DataTypes.STRING, allowNull: false },
+  url: { type: DataTypes.STRING, allowNull: false },
+  encrypted_key_hash: { type: DataTypes.STRING, allowNull: false },
+  userId: { type: DataTypes.INTEGER, allowNull: false },
+}, { timestamps: false, tableName: 'passwords' });
+
+(async () => {
+  try {
+    await sequelize.sync({ alter: true });
+    console.log('Database synced');
+  } catch (err) {
+    console.error('Database sync error:', err);
+  }
+})();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+function encrypt(text, key) {
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key), iv);
+  let encrypted = cipher.update(text);
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+  return iv.toString('hex') + ':' + encrypted.toString('hex');
+}
+
+app.post('/signup', async (req, res) => {
   const { username, email, password } = req.body;
-  const encryption_key = crypto.randomBytes(16).toString('hex');
-  const hashedPassword = await hashStr(password);
-  const hashedKey = await hashStr(encryption_key);
-  const modelsObj = await models.default;
-  const user = await modelsObj.User.create({ username, email, password: hashedPassword, encryption_key: hashedKey });
-  const token = await generateJWT(user);
+  const encryptionKey = crypto.randomBytes(16).toString('hex');
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const hashedKey = await bcrypt.hash(encryptionKey, 10);
+  const user = await User.create({ username, email, password: hashedPassword, encryption_key: hashedKey, created_at: new Date() });
+  const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '1h' });
   res.json({ message: 'User created', user: { id: user.id, username, email }, token });
 });
 
-// Login Route
-app.post('/login', async (req, res, next) => {
+app.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  const modelsObj = await models.default;
-  const user = await modelsObj.User.findOne({ where: { username } });
+  const user = await User.findOne({ where: { username } });
   if (user && await bcrypt.compare(password, user.password)) {
-    const token = await generateJWT(user);
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '1h' });
     res.json({ message: 'Login successful', token });
   } else {
     res.status(401).json({ message: 'Invalid credentials' });
   }
 });
 
-// Save Password Route
-app.post('/passwords/save', async (req, res, next) => {
-  const { url, username, password, encryption_key, label } = req.body;
-  const userId = req.auth.id;
-  const modelsObj = await models.default;
-  const userRecord = await modelsObj.User.findOne({
-    attributes: ['encryption_key'], where: { id: userId }
-  });
-  if (!userRecord) {
-    res.status(403);
-    return res.json({ message: 'Unable to find the account' });
+app.post('/save-password', async (req, res) => {
+  const { label, username, password, url, encryption_key } = req.body;
+  if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
-  const matched = await bcrypt.compare(encryption_key, userRecord.encryption_key);
-  if (!matched) {
-    res.status(400);
-    return res.json({ message: 'Incorrect encryption key' });
-  }
-  if (!(username && password && url)) {
-    res.status(400);
-    return res.json({ message: 'Missing parameters' });
-  }
-  const encryptedUsername = encrypt(username, encryption_key);
-  const encryptedPassword = encrypt(password, encryption_key);
-  const result = await modelsObj.UserPassword.create({
-    ownerUserId: userId, password: encryptedPassword, username: encryptedUsername, url, label
-  });
-  res.status(200);
-  res.json({ message: 'Password is saved' });
-});
-
-// Utility Functions
-async function hashStr(str) {
-  const salt = await bcrypt.genSalt(10);
-  return bcrypt.hash(str, salt);
-}
-
-function generateJWT(user) {
-  return new Promise((resolve, reject) => {
-    JWT.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
-      if (err) reject(err);
-      resolve(token);
+  const token = req.headers.authorization.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findByPk(decoded.id);
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+    const isValidKey = await bcrypt.compare(encryption_key, user.encryption_key);
+    if (!isValidKey) {
+      return res.status(400).json({ error: 'Invalid encryption key' });
+    }
+    if (!label || !username || !password || !url || !encryption_key) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    const encryptedPassword = encrypt(password, encryption_key);
+    const encryptedKeyHash = await bcrypt.hash(encryption_key, 10);
+    await Password.create({
+      label,
+      username: encrypt(username, encryption_key),
+      encrypted_password: encryptedPassword,
+      url,
+      encrypted_key_hash: encryptedKeyHash,
+      userId: user.id,
     });
-  });
-}
-
-function encrypt(unencrypted_string, key) {
-  const algorithm = 'aes-256-ctr';
-  const iv = crypto.randomBytes(16);
-  const encKey = crypto.createHash('sha256').update(String(key)).digest('base64').slice(0, 32);
-  const cipher = crypto.createCipheriv(algorithm, encKey, iv);
-  let crypted = cipher.update(unencrypted_string, 'utf-8', 'base64') + cipher.final('base64');
-  return `${crypted}-${iv.toString('base64')}`;
-}
-
-function decrypt(encStr, key) {
-  const algorithm = 'aes-256-ctr';
-  const encArr = encStr.split('-');
-  const encKey = crypto.createHash('sha256').update(String(key)).digest('base64').slice(0, 32);
-  const decipher = crypto.createDecipheriv(algorithm, encKey, Buffer.from(encArr[1], 'base64'));
-  let decrypted = decipher.update(encArr[0], 'base64', 'utf-8');
-  decrypted += decipher.final('utf-8');
-  return decrypted;
-}
-
-import models from './models/index.js';
-
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
+    res.json({ message: 'Password saved' });
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
 });
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
