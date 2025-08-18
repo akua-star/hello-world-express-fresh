@@ -55,17 +55,15 @@ app.get('/', (req, res) => { // Ensure this route is active
 });
 
 app.post('/signup', async (req, res) => {
-  const { username, email, password } = req.body;
-  const encryptionKey = crypto.randomBytes(16).toString('hex');
+  const { username, email, password, encryption_key } = req.body;
   const hashedPassword = await bcrypt.hash(password, 10);
-  const hashedKey = await bcrypt.hash(encryptionKey, 10);
+  const hashedKey = await bcrypt.hash(encryption_key, 10);
   const existingUser = await User.findOne({ where: { email } });
   if (existingUser) {
     return res.status(400).json({ message: 'Email already exists' });
   }
   const user = await User.create({ username, email, password: hashedPassword, encryption_key: hashedKey, created_at: new Date() });
-  const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '1h' });
-  res.json({ message: 'User created', user: { id: user.id, username, email }, token, encryption_key: encryptionKey }); // Add encryption_key
+  res.json({ message: 'User created', user: { id: user.id, username, email } }); // Add encryption_key
 });
 
 app.post('/login', async (req, res) => {
