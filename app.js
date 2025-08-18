@@ -42,13 +42,41 @@ const Password = sequelize.define('Password', {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-function encrypt(text, key) {
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key), iv);
-  let encrypted = cipher.update(text);
-  encrypted = Buffer.concat([encrypted, cipher.final()]);
-  return iv.toString('hex') + ':' + encrypted.toString('hex');
+function encrypt(unenrypted_string, key) {
+
+    const algorithm = 'aes-256-ctr';
+
+    const iv = crypto.randomBytes(16);
+
+    const encKey = crypto.createHash('sha256').update(String(key)).digest('base64').slice(0, 32)
+
+    const cipher = crypto.createCipheriv(algorithm, encKey, iv);
+
+    let crypted = cipher.update(unenrypted_string,'utf-8',"base64") + cipher.final("base64");
+
+    return `${crypted}-${iv.toString('base64')}`;
+
 }
+ 
+function decrypt(encStr, key) {
+
+    const algorithm = 'aes-256-ctr';
+
+    const encArr = encStr.split('-');
+
+    const encKey = crypto.createHash('sha256').update(String(key)).digest('base64').slice(0, 32);
+
+    const decipher = crypto.createDecipheriv(algorithm, encKey, Buffer.from(encArr[1], 'base64'));
+
+    let decrypted = decipher.update(encArr[0], 'base64', 'utf-8');
+
+    decrypted += decipher.final('utf-8');
+
+    return decrypted;
+
+}
+
+ 
 
 app.get('/', (req, res) => { // Ensure this route is active
   res.json({ message: "Hello, World!" });
