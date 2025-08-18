@@ -108,6 +108,7 @@ app.post('/save-password', async (req, res) => {
     });
     res.json({ message: 'Password saved' });
   } catch (err) {
+  console.error('Error saving password:', err);
     res.status(401).json({ error: 'Invalid token' });
   }
 });
