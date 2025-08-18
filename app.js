@@ -59,6 +59,10 @@ app.post('/signup', async (req, res) => {
   const encryptionKey = crypto.randomBytes(16).toString('hex');
   const hashedPassword = await bcrypt.hash(password, 10);
   const hashedKey = await bcrypt.hash(encryptionKey, 10);
+  const existingUser = await User.findOne({ where: { email } });
+  if (existingUser) {
+    return res.status(400).json({ message: 'Email already exists' });
+  }
   const user = await User.create({ username, email, password: hashedPassword, encryption_key: hashedKey, created_at: new Date() });
   const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '1h' });
   res.json({ message: 'User created', user: { id: user.id, username, email }, token, encryption_key: encryptionKey }); // Add encryption_key
