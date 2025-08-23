@@ -2,7 +2,7 @@
   "development": {
     "username": "postgres",
     "password": "5432",
-    "database": "myexpressdb",
+    "database": "myexpress_db_new",
     "host": "127.0.0.1",
     "port": 5432,
     "dialect": "postgres",
@@ -13,7 +13,7 @@
   "test": {
     "username": "postgres",
     "password": "5432",
-    "database": "myexpressdb_test",
+    "database": "myexpress_db_new_test",
     "host": "127.0.0.1",
     "port": 5432,
     "dialect": "postgres",
