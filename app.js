@@ -10,8 +10,13 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
   dialect: 'postgres',
   protocol: 'postgres',
   logging: false,
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false // Allows self-signed certificates; remove in production if using trusted CA
+    }
+  }
 });
-
 const User = sequelize.define('User', {
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   username: { type: DataTypes.STRING, allowNull: false },
@@ -141,5 +146,45 @@ app.post('/save-password', async (req, res) => {
   }
 });
 
+app.post('/passwords/list', async (req, res, next) => {
+    const userId = req.auth.id;
+    const encryptionKey = req.body.encryption_key;
+    const modelsObj = await models.default;
+    let passwords = await modelsObj.UserPassword.findAll({
+        attributes: ['id', 'url', 'username', 'password', 'label', 'weak_encryption'], where: { ownerUserId: userId }
+    });
+    const userRecord = await modelsObj.User.findOne({
+        attributes: ['encryption_key'], where: { id: userId }
+    });
+    const matched = await bcrypt.compare(encryptionKey, userRecord.encryption_key);
+    if (!matched) {
+        res.status(400);
+        return res.json({message: 'Incorrect encryption key'});
+    }
+    const passwordsArr = [];
+    for (let i = 0; i < passwords.length; i++) {
+        const element = passwords[i];
+        // await upgradeWeakEncryption(element, userRecord, encryptionKey);
+        element.password = decrypt(element.password, encryptionKey);
+        element.username = decrypt(element.username, encryptionKey);
+        passwordsArr.push(element);
+    }
+    res.status(200);
+    res.json({message: 'Success', data: passwordsArr});
+});
+
+
+async function upgradeWeakEncryption(element, userRecord, encryptionKey) {
+    if (element.weak_encryption) {
+        const decryptedPassword = decrypt(element.password, userRecord.encryption_key);
+        const decryptedUserName = decrypt(element.username, userRecord.encryption_key);
+        element.password = encrypt(decryptedPassword, encryptionKey);
+        element.username = encrypt(decryptedUserName, encryptionKey);
+        element.weak_encryption = false;
+        await element.save();
+    }
+}
+
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
