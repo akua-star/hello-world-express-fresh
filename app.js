@@ -154,11 +154,10 @@ app.post('/save-password', async (req, res) => {
 app.post('/passwords/list', async (req, res, next) => {
     const userId = req.auth.id;
     const encryptionKey = req.body.encryption_key;
-    const modelsObj = await models.default;
-    let passwords = await modelsObj.UserPassword.findAll({
+    let passwords = await Password.findAll({
         attributes: ['id', 'url', 'username', 'password', 'label', 'weak_encryption'], where: { ownerUserId: userId }
     });
-    const userRecord = await modelsObj.User.findOne({
+    const userRecord = await User.findOne({
         attributes: ['encryption_key'], where: { id: userId }
     });
     const matched = await bcrypt.compare(encryptionKey, userRecord.encryption_key);
