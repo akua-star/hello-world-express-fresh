@@ -3,8 +3,15 @@ const { Sequelize, DataTypes } = require('sequelize');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const expressjwt = require('express-jwt')
 const app = express();
 app.use(express.json());
+app.use(
+    expressjwt({
+        secret: process.env.JWT_SECRET,
+        algorithms: ["HS256"],
+    }).unless({ path: ["/login", "/signup", '/'] })
+);
 
 const sequelize = new Sequelize(process.env.DATABASE_URL, {
   dialect: 'postgres',
@@ -112,13 +119,10 @@ app.post('/login', async (req, res) => {
 
 app.post('/save-password', async (req, res) => {
   const { label, username, password, url, encryption_key } = req.body;
-  if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  const token = req.headers.authorization.split(' ')[1];
+
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findByPk(decoded.id);
+  
+    const user = await User.findByPk(req.auth.id );
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
