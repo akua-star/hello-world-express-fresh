@@ -3,7 +3,8 @@ const { Sequelize, DataTypes } = require('sequelize');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const expressjwt = require('express-jwt')
+const { expressjwt } = require("express-jwt");
+ 
 const app = express();
 app.use(express.json());
 app.use(
