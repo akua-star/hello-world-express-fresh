@@ -33,16 +33,7 @@ const User = sequelize.define('User', {
   encryption_key: { type: DataTypes.STRING, allowNull: false },
   created_at: { type: DataTypes.DATE, allowNull: false },
 }, { timestamps: false, tableName: 'users' });
-
-const Password = sequelize.define('Password', {
-  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-  label: { type: DataTypes.STRING, allowNull: false },
-  username: { type: DataTypes.STRING, allowNull: false },
-  encrypted_password: { type: DataTypes.STRING, allowNull: false },
-  url: { type: DataTypes.STRING, allowNull: false },
-  encrypted_key_hash: { type: DataTypes.STRING, allowNull: false },
-  userId: { type: DataTypes.INTEGER, allowNull: false },
-}, { timestamps: false, tableName: 'passwords' });
+const Password = require('./models/userpassword')
 
 (async () => {
   try {
